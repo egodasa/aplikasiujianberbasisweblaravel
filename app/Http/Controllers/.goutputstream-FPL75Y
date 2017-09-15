@@ -1,0 +1,92 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\MUjian;
+use DB;
+class Ujian extends Controller
+{
+	public $cekUjian = [
+            'nm_ujian' => 'bail|required|min:3|max:30',
+	        'jam' => 'bail|required',
+	        'menit' => 'bail|required'
+        ];
+    public $errUjian = [
+			'nm_ujian.required'=>'Nama Ujian harus diisi!',
+			'nm_ujian.min'=>'Nama Ujian terlalu pendek!',
+			'nm_ujian.max'=>'Nama Ujian terlalu panjang!',
+			'jam.required'=>'Jam harus diisi minimal 0!',
+			'menit.required'=>'Menit harus diisi minimal 0!'
+		];
+	public function __construct(){
+		
+	}
+    public function hasilUjian(){
+		$data = new \stdClass;
+		$data->status = true;
+		$data->data = DB::table('tbhasil_ujian')->get();
+		$data->row = count($data->data);
+		return response()->json($data);
+	}
+    public function soalUjian($id){
+		$data = new \stdClass;
+		$data->status = true;
+		$data->data = DB::select('CALL getSoalUjian(?,"0000000");',[$id]);
+		$data->row = count($data->data);
+		return response()->json($data);
+	}
+    public function pesertaUjian($id){
+		$data = new \stdClass;
+		$data->status = true;
+		$data->data = DB::select('CALL getPesertaUjian(?,0);',[$id]);
+		$data->row = count($data->data);
+		return response()->json($data);
+	}
+    public function getUjian($id = null){
+		$data = new \stdClass;
+		if($id == null){
+			$data->data = DB::select('call getUjian("0000000",0,0);');
+		}else{
+			$data->data = DB::select('call getUjian(?,0,0);',[$id]);
+		}
+		$data->row = count($data->data);
+		return response()->json($data);
+	}
+	public function getUjianPagination($limit,$offset){
+		$data = new \stdClass;
+		$data->data = $data->data = DB::select('call getUjian("0000000",?,?);',[$limit,$offset]);
+		$data->row = count($data->data);
+		return response()->json($data);
+	}
+	public function addUjian(Request $req){
+		$data = new \stdClass;
+		$validator = \Validator::make($req->all(), $this->cekUjian, $this->errUjian);
+		if($validator->fails()) {
+			$data->status = false;
+			$data->error = $validator->errors();
+		}else{
+			$data->status = true;
+			$data->error = null;
+			DB::select('CALL createUjian(?,?,?);',[$req->nm_ujian,$req->jam,$req->menit]);
+		}
+		return response()->json($data);
+	}
+	public function deleteUjian($id){
+		DB::select('call deleteUjian(?);',[$id]);
+		return response()->json(['status'=>true]);
+	}
+	public function updateUjian(Request $req,$id){
+		$data = new \stdClass;
+		$validator = \Validator::make($req->all(), $this->cekUjian, $this->errUjian);
+		if($validator->fails()) {
+			$data->status = false;
+			$data->error = $validator->errors();
+		}else{
+			DB::select('CALL updateUjian(?,?,?,?);',[$id,$req->nm_ujian,$req->jam,$req->menit]);
+			$data->status = true;
+			$data->error = null;
+		}
+		return response()->json($data);
+	}
+}
